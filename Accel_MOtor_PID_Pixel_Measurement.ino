@@ -41,7 +41,7 @@ Stepper steppermotor2(STEPS_PER_REV, 33, 26, 25, 27);
 #define motorPin6  25     // Pink   - 28BYJ48 pin 2
 #define motorPin7  26     // Yellow - 28BYJ48 pin 3
 #define motorPin8  27     // Orange - 28BYJ48 pin 4
-AccelStepper stepper1(HALFSTEP, motorPin1, motorPin3, motorPin2, motorPin4);
+AccelStepper stepper1(FULLSTEP, motorPin1, motorPin3, motorPin2, motorPin4);
 AccelStepper stepper2(FULLSTEP, motorPin5, motorPin7, motorPin6, motorPin8);
 
 //********************************************************
@@ -346,27 +346,27 @@ void setup() {
   Y_PID.SetTunings(Kp, Ki, Kd);
 
   stepper1.setMaxSpeed(1000.0);
-  stepper1.setAcceleration(1000.0);
-  stepper1.setSpeed(1000);
-  stepper1.moveTo(stepper1.currentPosition());
+  stepper1.setAcceleration(50.0);
+  stepper1.setSpeed(200);
+  stepper1.moveTo(2048);
   stepper2.setMaxSpeed(1000.0);
-  stepper2.setAcceleration(1000.0);
-  stepper2.setSpeed(1000);
-  stepper2.moveTo(stepper2.currentPosition());
+  stepper2.setAcceleration(50.0);
+  stepper2.setSpeed(200);
+  stepper2.moveTo(2048);
 }
 
 void loop()
 {
   float Y_voltage = measureVoltage(Y_ADC_PIN) * polarity(Y_POLARITY_PIN);
   float X_voltage = measureVoltage(X_ADC_PIN) * polarity(X_POLARITY_PIN);
-
+//
   X_Input = -measureVoltage(X_ADC_PIN);
   Y_Input = -measureVoltage(Y_ADC_PIN);
   X_PID.Compute();
   Y_PID.Compute();
-
+//
   motor_control(X_voltage, Y_voltage);
-
+//
   drawAxis();
   draw_light_spot(X_voltage, Y_voltage);
   display.setCursor(0, 0);
@@ -451,21 +451,28 @@ void display_setup()
 
 void motor_control(float X_voltage, float Y_voltage)
 {
-  float Y_speed = 1000.0 * (Y_Output / 100);
-  float X_speed = 1000.0 * (X_Output / 100);
+//  float Y_speed = 1000.0 * (Y_Output / 100);
+//  float X_speed = 1000.0 * (X_Output / 100);
+int move_ = 0;
 
   if (Y_voltage < 0)
   {
-    stepper1.setMaxSpeed(-Y_speed);
-    stepper1.setSpeed(-Y_speed);
-    int move_ = stepper1.currentPosition() - 1;
+//    stepper1.setMaxSpeed(-Y_speed);
+//    stepper1.setSpeed(-Y_speed);
+    if(Y_voltage < -2)
+    move_ = stepper1.currentPosition() - 100;
+    else
+     move_ = stepper1.currentPosition() - 1;
     stepper1.moveTo(move_);
   }
   else if (Y_voltage > 0)
   {
-    stepper1.setMaxSpeed(Y_speed);
-    stepper1.setSpeed(Y_speed);
-    int move_ = stepper1.currentPosition() + 1;
+//    stepper1.setMaxSpeed(Y_speed);
+//    stepper1.setSpeed(Y_speed);
+    if(Y_voltage > 2)
+    move_ = stepper1.currentPosition() + 100;
+    else
+     move_ = stepper1.currentPosition() + 1;
     stepper1.moveTo(move_);
   }
   else
@@ -475,16 +482,22 @@ void motor_control(float X_voltage, float Y_voltage)
 
   if (X_voltage < 0)
   {
-    stepper2.setMaxSpeed(-X_speed);
-    stepper2.setSpeed(-X_speed);
-    int move_ = stepper2.currentPosition() - 1;
+//    stepper2.setMaxSpeed(-X_speed);
+//    stepper2.setSpeed(-X_speed);
+    if(X_voltage < -2)
+    move_ = stepper2.currentPosition() - 100;
+    else
+     move_ = stepper2.currentPosition() - 1;
     stepper2.moveTo(move_);
   }
   else if (X_voltage > 0)
   {
-    stepper2.setMaxSpeed(X_speed);
-    stepper2.setSpeed(X_speed);
-    int move_ = stepper2.currentPosition() + 1;
+//    stepper2.setMaxSpeed(X_speed);
+//    stepper2.setSpeed(X_speed);
+    if(X_voltage > 2)
+     move_ = stepper2.currentPosition() + 100;
+    else
+     move_ = stepper2.currentPosition() + 1;
     stepper2.moveTo(move_);
   }
   else
