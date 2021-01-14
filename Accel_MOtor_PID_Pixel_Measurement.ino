@@ -365,35 +365,16 @@ void loop()
   X_PID.Compute();
   Y_PID.Compute();
 
-  //  Serial.print(X_Output);
-  //  Serial.println(" X_Output");
-  //  Serial.print(Y_Output);
-  //  Serial.println(" Y_Output");
   motor_control(X_voltage, Y_voltage);
 
-//  unsigned long myTime;
-//  myTime = millis();
-//
-//  if (myTime % 400 == 0)
-//  {
-//    drawAxis();
-//    draw_light_spot(X_voltage, Y_voltage);
-//    display.setCursor(0, 0);
-//    display.print(Y_voltage);
-//    display.setCursor(98, 0);
-//    display.print(X_voltage);
-//    display.display();
-//    display.clearDisplay();
-//  }
-
-    drawAxis();
-    draw_light_spot(X_voltage, Y_voltage);
-    display.setCursor(0, 0);
-    display.print(Y_voltage);
-    display.setCursor(98, 0);
-    display.print(X_voltage);
-    display.display();
-    display.clearDisplay();
+  drawAxis();
+  draw_light_spot(X_voltage, Y_voltage);
+  display.setCursor(0, 0);
+  display.print(Y_voltage);
+  display.setCursor(98, 0);
+  display.print(X_voltage);
+  display.display();
+  display.clearDisplay();
 
 }
 
@@ -451,7 +432,6 @@ float measureVoltage(int ADC_PIN) {
 
   float voltage = calibratedReading / 4096 * 5 * (200000 / 200000);
   if (voltage < 4 && voltage > 0.02) voltage += 0.2;
-  //delay(200);
   return voltage;
 }
 
@@ -471,18 +451,8 @@ void display_setup()
 
 void motor_control(float X_voltage, float Y_voltage)
 {
-  float Y_speed = 2000.0 * (Y_Output / 100);
-  float X_speed = 2000.0 * (X_Output / 100);
-
-  //  stepper1.setMaxSpeed(Y_speed);
-  //  stepper1.setSpeed(Y_speed);
-  //  stepper2.setMaxSpeed(X_speed);
-  //  stepper2.setSpeed(X_speed);
-
-//  Serial.print(X_speed);
-//  Serial.println(" X_speed");
-//  Serial.print(Y_speed);
-//  Serial.println(" Y_speed");
+  float Y_speed = 1000.0 * (Y_Output / 100);
+  float X_speed = 1000.0 * (X_Output / 100);
 
   if (Y_voltage < 0)
   {
