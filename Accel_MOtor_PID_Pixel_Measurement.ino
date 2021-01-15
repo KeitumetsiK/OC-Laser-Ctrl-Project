@@ -1,6 +1,7 @@
 /**
- * Self-Correcting Laser Alignment System
- * Keitumetsi Khoza
+   Self-Correcting Laser Alignment System Code
+   Keitumetsi Khoza
+   15/01/21
 **/
 
 #include <Wire.h>
@@ -22,28 +23,18 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 #define Y_POLARITY_PIN 34
 #define X_POLARITY_PIN 36
 
-//*******************************************************
-
-#include <Stepper.h>
-const float STEPS_PER_REV = 32;
-const float GEAR_RED = 64;
-const float STEPS_PER_OUT_REV = STEPS_PER_REV * GEAR_RED;
-int StepsRequired;
-Stepper steppermotor(STEPS_PER_REV, 16, 18, 17, 19);
-Stepper steppermotor2(STEPS_PER_REV, 33, 26, 25, 27);
-
 //********************************************************
 
 #include <AccelStepper.h>
 #define FULLSTEP 4
-#define motorPin1  16     // Blue   - 28BYJ48 pin 1
-#define motorPin2  17    // Pink   - 28BYJ48 pin 2
-#define motorPin3  18    // Yellow - 28BYJ48 pin 3
-#define motorPin4  19    // Orange - 28BYJ48 pin 4
-#define motorPin5  33     // Blue   - 28BYJ48 pin 1
-#define motorPin6  25     // Pink   - 28BYJ48 pin 2
-#define motorPin7  26     // Yellow - 28BYJ48 pin 3
-#define motorPin8  27     // Orange - 28BYJ48 pin 4
+#define motorPin1  16
+#define motorPin2  17  
+#define motorPin3  18 
+#define motorPin4  19  
+#define motorPin5  33  
+#define motorPin6  25  
+#define motorPin7  26 
+#define motorPin8  27  
 AccelStepper stepper1(FULLSTEP, motorPin1, motorPin3, motorPin2, motorPin4);
 AccelStepper stepper2(FULLSTEP, motorPin5, motorPin7, motorPin6, motorPin8);
 
@@ -61,8 +52,8 @@ PID X_PID(&X_Input, &X_Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 unsigned long currentMillis = 0;
 unsigned long beginMillis = 0;
 unsigned long period = 400;
-float Y_voltage_ = 0;
-float X_voltage_ = 0;
+float Y_voltage_delayed = 0;
+float X_voltage_delayed = 0;
 
 //********************************************************
 
@@ -341,15 +332,59 @@ const float ADC_LUT[4096] = { 0,
                               3985.0000, 3986.0000, 3986.8000, 3987.3999, 3988.0000, 3988.8000, 3989.6001, 3990.0000, 3991.0000, 3991.8000, 3992.3999, 3993.0000, 3993.8000, 3994.6001, 3995.0000,
                               3996.0000, 3996.8000, 3997.3999, 3998.0000, 3998.8000, 3999.6001, 4000.0000, 4002.6001, 4004.8000, 4007.0000, 4009.3999, 4011.8000, 4014.0000, 4016.2000, 4026.80
                             };
-                            
+
 
 
 
 void setup() {
+
   //Serial.begin(115200);
+  beginMillis = millis();
   analogReadResolution(12);
   display_setup();
+  PID_setup();
+  motor_setup();
+}
 
+void loop()
+{
+  float Y_voltage = measureVoltage(Y_ADC_PIN) * polarity(Y_POLARITY_PIN);
+  float X_voltage = measureVoltage(X_ADC_PIN) * polarity(X_POLARITY_PIN);
+  PID_compute();
+  motor_control(X_voltage, Y_voltage);
+  render_display(X_voltage, Y_voltage);
+}
+
+void render_display(float X_voltage, float Y_voltage)
+{
+  currentMillis = millis();
+  if (currentMillis - beginMillis > period)
+  {
+    Y_voltage_delayed = Y_voltage;
+    X_voltage_delayed = X_voltage;
+    beginMillis = currentMillis;
+  }
+
+  drawAxis();
+  draw_light_spot(X_voltage, Y_voltage);
+  display.setCursor(0, 0);
+  display.print(Y_voltage_delayed);
+  display.setCursor(98, 0);
+  display.print(X_voltage_delayed);
+  display.display();
+  display.clearDisplay();
+}
+
+void PID_compute()
+{
+  X_Input = -measureVoltage(X_ADC_PIN);
+  Y_Input = -measureVoltage(Y_ADC_PIN);
+  X_PID.Compute();
+  Y_PID.Compute();
+}
+
+void PID_setup()
+{
   Setpoint = 0;
   X_Input = -measureVoltage(X_ADC_PIN);
   Y_Input = -measureVoltage(Y_ADC_PIN);
@@ -357,7 +392,10 @@ void setup() {
   Y_PID.SetMode(AUTOMATIC);
   X_PID.SetTunings(Kp, Ki, Kd);
   Y_PID.SetTunings(Kp, Ki, Kd);
+}
 
+void motor_setup()
+{
   stepper1.setMaxSpeed(1000.0);
   stepper1.setAcceleration(50.0);
   stepper1.setSpeed(200);
@@ -366,40 +404,6 @@ void setup() {
   stepper2.setAcceleration(50.0);
   stepper2.setSpeed(200);
   stepper2.moveTo(2048);
-
-  beginMillis = millis();
-
-}
-
-void loop()
-{
-  float Y_voltage = measureVoltage(Y_ADC_PIN) * polarity(Y_POLARITY_PIN);
-  float X_voltage = measureVoltage(X_ADC_PIN) * polarity(X_POLARITY_PIN);
- 
-  X_Input = -measureVoltage(X_ADC_PIN);
-  Y_Input = -measureVoltage(Y_ADC_PIN);
-  X_PID.Compute();
-  Y_PID.Compute();
-
-  motor_control(X_voltage, Y_voltage);
-  
-  currentMillis = millis();
-  if (currentMillis - beginMillis > period)
-  {
-    Y_voltage_ = Y_voltage;
-    X_voltage_ = X_voltage;
-    beginMillis = currentMillis;
-  }
-
-  drawAxis();
-  draw_light_spot(X_voltage, Y_voltage);
-  display.setCursor(0, 0);
-  display.print(Y_voltage_);
-  display.setCursor(98, 0);
-  display.print(X_voltage_);
-  display.display();
-  display.clearDisplay();
-
 }
 
 int polarity(int POLARITY_PIN)
