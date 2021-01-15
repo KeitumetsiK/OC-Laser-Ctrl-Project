@@ -28,13 +28,13 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 #include <AccelStepper.h>
 #define FULLSTEP 4
 #define motorPin1  16
-#define motorPin2  17  
-#define motorPin3  18 
-#define motorPin4  19  
-#define motorPin5  33  
-#define motorPin6  25  
-#define motorPin7  26 
-#define motorPin8  27  
+#define motorPin2  17
+#define motorPin3  18
+#define motorPin4  19
+#define motorPin5  33
+#define motorPin6  25
+#define motorPin7  26
+#define motorPin8  27
 AccelStepper stepper1(FULLSTEP, motorPin1, motorPin3, motorPin2, motorPin4);
 AccelStepper stepper2(FULLSTEP, motorPin5, motorPin7, motorPin6, motorPin8);
 
@@ -51,9 +51,7 @@ PID X_PID(&X_Input, &X_Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 unsigned long currentMillis = 0;
 unsigned long beginMillis = 0;
-unsigned long period = 400;
-float Y_voltage_delayed = 0;
-float X_voltage_delayed = 0;
+unsigned long period = 500;
 
 //********************************************************
 
@@ -360,19 +358,18 @@ void render_display(float X_voltage, float Y_voltage)
   currentMillis = millis();
   if (currentMillis - beginMillis > period)
   {
-    Y_voltage_delayed = Y_voltage;
-    X_voltage_delayed = X_voltage;
+    drawAxis();
+    draw_light_spot(X_voltage, Y_voltage);
+    display.setCursor(0, 0);
+    display.print(Y_voltage);
+    display.setCursor(98, 0);
+    display.print(X_voltage);
+    display.display();
+    display.clearDisplay();
     beginMillis = currentMillis;
   }
 
-  drawAxis();
-  draw_light_spot(X_voltage, Y_voltage);
-  display.setCursor(0, 0);
-  display.print(Y_voltage_delayed);
-  display.setCursor(98, 0);
-  display.print(X_voltage_delayed);
-  display.display();
-  display.clearDisplay();
+
 }
 
 void PID_compute()
@@ -481,23 +478,14 @@ void motor_control(float X_voltage, float Y_voltage)
 {
   int Y_speed = 2048 * (Y_Output / 100);
   int X_speed = 2048 * (X_Output / 100);
-  int move_ = 0;
 
   if (Y_voltage < 0)
   {
-    if (Y_voltage < -1)
-      move_ = stepper1.currentPosition() - Y_speed;
-    else
-      move_ = stepper1.currentPosition() - Y_speed;
-    stepper1.moveTo(move_);
+    stepper1.moveTo(stepper1.currentPosition() - Y_speed);
   }
   else if (Y_voltage > 0)
   {
-    if (Y_voltage > 1)
-      move_ = stepper1.currentPosition() + Y_speed;
-    else
-      move_ = stepper1.currentPosition() + Y_speed;
-    stepper1.moveTo(move_);
+    stepper1.moveTo(stepper1.currentPosition() + Y_speed);
   }
   else
   {
@@ -506,19 +494,11 @@ void motor_control(float X_voltage, float Y_voltage)
 
   if (X_voltage < 0)
   {
-    if (X_voltage < -1)
-      move_ = stepper2.currentPosition() - X_speed;
-    else
-      move_ = stepper2.currentPosition() - X_speed;
-    stepper2.moveTo(move_);
+    stepper2.moveTo(stepper2.currentPosition() - X_speed);
   }
   else if (X_voltage > 0)
   {
-    if (X_voltage > 1)
-      move_ = stepper2.currentPosition() + X_speed;
-    else
-      move_ = stepper2.currentPosition() + X_speed;
-    stepper2.moveTo(move_);
+    stepper2.moveTo(stepper2.currentPosition() + X_speed);
   }
   else
   {
