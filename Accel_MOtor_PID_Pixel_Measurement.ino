@@ -1,7 +1,11 @@
+/**
+ * Self-Correcting Laser Alignment System
+ * Keitumetsi Khoza
+**/
+
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 #define OLED_SDA 5
@@ -32,7 +36,6 @@ Stepper steppermotor2(STEPS_PER_REV, 33, 26, 25, 27);
 
 #include <AccelStepper.h>
 #define FULLSTEP 4
-#define HALFSTEP 8
 #define motorPin1  16     // Blue   - 28BYJ48 pin 1
 #define motorPin2  17    // Pink   - 28BYJ48 pin 2
 #define motorPin3  18    // Yellow - 28BYJ48 pin 3
@@ -52,6 +55,14 @@ double Setpoint, Y_Input, Y_Output;
 PID Y_PID(&Y_Input, &Y_Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 double X_Input, X_Output;
 PID X_PID(&X_Input, &X_Output, &Setpoint, Kp, Ki, Kd, DIRECT);
+
+//********************************************************
+
+unsigned long currentMillis = 0;
+unsigned long beginMillis = 0;
+unsigned long period = 400;
+float Y_voltage_ = 0;
+float X_voltage_ = 0;
 
 //********************************************************
 
@@ -330,6 +341,8 @@ const float ADC_LUT[4096] = { 0,
                               3985.0000, 3986.0000, 3986.8000, 3987.3999, 3988.0000, 3988.8000, 3989.6001, 3990.0000, 3991.0000, 3991.8000, 3992.3999, 3993.0000, 3993.8000, 3994.6001, 3995.0000,
                               3996.0000, 3996.8000, 3997.3999, 3998.0000, 3998.8000, 3999.6001, 4000.0000, 4002.6001, 4004.8000, 4007.0000, 4009.3999, 4011.8000, 4014.0000, 4016.2000, 4026.80
                             };
+                            
+
 
 
 void setup() {
@@ -353,26 +366,37 @@ void setup() {
   stepper2.setAcceleration(50.0);
   stepper2.setSpeed(200);
   stepper2.moveTo(2048);
+
+  beginMillis = millis();
+
 }
 
 void loop()
 {
   float Y_voltage = measureVoltage(Y_ADC_PIN) * polarity(Y_POLARITY_PIN);
   float X_voltage = measureVoltage(X_ADC_PIN) * polarity(X_POLARITY_PIN);
-//
+ 
   X_Input = -measureVoltage(X_ADC_PIN);
   Y_Input = -measureVoltage(Y_ADC_PIN);
   X_PID.Compute();
   Y_PID.Compute();
-//
+
   motor_control(X_voltage, Y_voltage);
-//
+  
+  currentMillis = millis();
+  if (currentMillis - beginMillis > period)
+  {
+    Y_voltage_ = Y_voltage;
+    X_voltage_ = X_voltage;
+    beginMillis = currentMillis;
+  }
+
   drawAxis();
   draw_light_spot(X_voltage, Y_voltage);
   display.setCursor(0, 0);
-  display.print(Y_voltage);
+  display.print(Y_voltage_);
   display.setCursor(98, 0);
-  display.print(X_voltage);
+  display.print(X_voltage_);
   display.display();
   display.clearDisplay();
 
@@ -451,28 +475,24 @@ void display_setup()
 
 void motor_control(float X_voltage, float Y_voltage)
 {
-//  float Y_speed = 1000.0 * (Y_Output / 100);
-//  float X_speed = 1000.0 * (X_Output / 100);
-int move_ = 0;
+  int Y_speed = 2048 * (Y_Output / 100);
+  int X_speed = 2048 * (X_Output / 100);
+  int move_ = 0;
 
   if (Y_voltage < 0)
   {
-//    stepper1.setMaxSpeed(-Y_speed);
-//    stepper1.setSpeed(-Y_speed);
-    if(Y_voltage < -1)
-    move_ = stepper1.currentPosition() - 2048;
+    if (Y_voltage < -1)
+      move_ = stepper1.currentPosition() - Y_speed;
     else
-     move_ = stepper1.currentPosition() - 100;
+      move_ = stepper1.currentPosition() - 100;
     stepper1.moveTo(move_);
   }
   else if (Y_voltage > 0)
   {
-//    stepper1.setMaxSpeed(Y_speed);
-//    stepper1.setSpeed(Y_speed);
-    if(Y_voltage > 1)
-    move_ = stepper1.currentPosition() + 2048;
+    if (Y_voltage > 1)
+      move_ = stepper1.currentPosition() + Y_speed;
     else
-     move_ = stepper1.currentPosition() + 100;
+      move_ = stepper1.currentPosition() + 100;
     stepper1.moveTo(move_);
   }
   else
@@ -482,22 +502,18 @@ int move_ = 0;
 
   if (X_voltage < 0)
   {
-//    stepper2.setMaxSpeed(-X_speed);
-//    stepper2.setSpeed(-X_speed);
-    if(X_voltage < -1)
-    move_ = stepper2.currentPosition() - 2048;
+    if (X_voltage < -1)
+      move_ = stepper2.currentPosition() - X_speed;
     else
-     move_ = stepper2.currentPosition() - 100;
+      move_ = stepper2.currentPosition() - 100;
     stepper2.moveTo(move_);
   }
   else if (X_voltage > 0)
   {
-//    stepper2.setMaxSpeed(X_speed);
-//    stepper2.setSpeed(X_speed);
-    if(X_voltage > 1)
-     move_ = stepper2.currentPosition() + 2048;
+    if (X_voltage > 1)
+      move_ = stepper2.currentPosition() + X_speed;
     else
-     move_ = stepper2.currentPosition() + 100;
+      move_ = stepper2.currentPosition() + 100;
     stepper2.moveTo(move_);
   }
   else
