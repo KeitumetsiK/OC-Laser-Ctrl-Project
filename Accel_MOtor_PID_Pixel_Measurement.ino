@@ -486,7 +486,7 @@ void motor_control(float X_voltage, float Y_voltage)
   if (Y_voltage < 0)
   {
     if (Y_voltage < -1)
-      move_ = stepper1.currentPosition() - 2048;
+      move_ = stepper1.currentPosition() - Y_speed;
     else
       move_ = stepper1.currentPosition() - Y_speed;
     stepper1.moveTo(move_);
@@ -494,7 +494,7 @@ void motor_control(float X_voltage, float Y_voltage)
   else if (Y_voltage > 0)
   {
     if (Y_voltage > 1)
-      move_ = stepper1.currentPosition() + 2048;
+      move_ = stepper1.currentPosition() + Y_speed;
     else
       move_ = stepper1.currentPosition() + Y_speed;
     stepper1.moveTo(move_);
@@ -507,7 +507,7 @@ void motor_control(float X_voltage, float Y_voltage)
   if (X_voltage < 0)
   {
     if (X_voltage < -1)
-      move_ = stepper2.currentPosition() - 2048;
+      move_ = stepper2.currentPosition() - X_speed;
     else
       move_ = stepper2.currentPosition() - X_speed;
     stepper2.moveTo(move_);
@@ -515,7 +515,7 @@ void motor_control(float X_voltage, float Y_voltage)
   else if (X_voltage > 0)
   {
     if (X_voltage > 1)
-      move_ = stepper2.currentPosition() + 2048;
+      move_ = stepper2.currentPosition() + X_speed;
     else
       move_ = stepper2.currentPosition() + X_speed;
     stepper2.moveTo(move_);
