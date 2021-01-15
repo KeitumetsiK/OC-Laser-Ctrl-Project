@@ -459,20 +459,20 @@ int move_ = 0;
   {
 //    stepper1.setMaxSpeed(-Y_speed);
 //    stepper1.setSpeed(-Y_speed);
-    if(Y_voltage < -2)
-    move_ = stepper1.currentPosition() - 100;
+    if(Y_voltage < -1)
+    move_ = stepper1.currentPosition() - 2048;
     else
-     move_ = stepper1.currentPosition() - 1;
+     move_ = stepper1.currentPosition() - 100;
     stepper1.moveTo(move_);
   }
   else if (Y_voltage > 0)
   {
 //    stepper1.setMaxSpeed(Y_speed);
 //    stepper1.setSpeed(Y_speed);
-    if(Y_voltage > 2)
-    move_ = stepper1.currentPosition() + 100;
+    if(Y_voltage > 1)
+    move_ = stepper1.currentPosition() + 2048;
     else
-     move_ = stepper1.currentPosition() + 1;
+     move_ = stepper1.currentPosition() + 100;
     stepper1.moveTo(move_);
   }
   else
@@ -484,20 +484,20 @@ int move_ = 0;
   {
 //    stepper2.setMaxSpeed(-X_speed);
 //    stepper2.setSpeed(-X_speed);
-    if(X_voltage < -2)
-    move_ = stepper2.currentPosition() - 100;
+    if(X_voltage < -1)
+    move_ = stepper2.currentPosition() - 2048;
     else
-     move_ = stepper2.currentPosition() - 1;
+     move_ = stepper2.currentPosition() - 100;
     stepper2.moveTo(move_);
   }
   else if (X_voltage > 0)
   {
 //    stepper2.setMaxSpeed(X_speed);
 //    stepper2.setSpeed(X_speed);
-    if(X_voltage > 2)
-     move_ = stepper2.currentPosition() + 100;
+    if(X_voltage > 1)
+     move_ = stepper2.currentPosition() + 2048;
     else
-     move_ = stepper2.currentPosition() + 1;
+     move_ = stepper2.currentPosition() + 100;
     stepper2.moveTo(move_);
   }
   else
