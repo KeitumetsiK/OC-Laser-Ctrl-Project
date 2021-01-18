@@ -1,7 +1,7 @@
 /**
    Self-Correcting Laser Alignment System Code
    Keitumetsi Khoza
-   15/01/21
+   18/01/21
 **/
 
 #include <Wire.h>
@@ -39,16 +39,7 @@ AccelStepper stepper1(FULLSTEP, motorPin1, motorPin3, motorPin2, motorPin4);
 AccelStepper stepper2(FULLSTEP, motorPin5, motorPin7, motorPin6, motorPin8);
 
 //********************************************************
-
-#include <PID_v1.h>
-double Kp = 20, Ki = 0, Kd = 0;
-double Setpoint, Y_Input, Y_Output;
-PID Y_PID(&Y_Input, &Y_Output, &Setpoint, Kp, Ki, Kd, DIRECT);
-double X_Input, X_Output;
-PID X_PID(&X_Input, &X_Output, &Setpoint, Kp, Ki, Kd, DIRECT);
-
-//********************************************************
-
+//used to control fps of OLED display
 unsigned long currentMillis = 0;
 unsigned long beginMillis = 0;
 unsigned long period = 500;
@@ -56,7 +47,7 @@ unsigned long period = 500;
 //********************************************************
 //points to set laser at
 float Y_point = 0;
-float X_point = -2;
+float X_point = 0;
 
 //********************************************************
 
@@ -345,15 +336,14 @@ void setup() {
   beginMillis = millis();
   analogReadResolution(12);
   display_setup();
-  PID_setup();
   motor_setup();
+  request_points_from_user();
 }
 
 void loop()
 {
   float Y_voltage = measureVoltage(Y_ADC_PIN) * polarity(Y_POLARITY_PIN);
   float X_voltage = measureVoltage(X_ADC_PIN) * polarity(X_POLARITY_PIN);
-  PID_compute();
   motor_control(X_voltage, Y_voltage);
   render_display(X_voltage, Y_voltage);
 }
@@ -375,25 +365,6 @@ void render_display(float X_voltage, float Y_voltage)
   }
 
 
-}
-
-void PID_compute()
-{
-  X_Input = -measureVoltage(X_ADC_PIN);
-  Y_Input = -measureVoltage(Y_ADC_PIN);
-  X_PID.Compute();
-  Y_PID.Compute();
-}
-
-void PID_setup()
-{
-  Setpoint = abs(Y_point);
-  X_Input = -measureVoltage(X_ADC_PIN);
-  Y_Input = -measureVoltage(Y_ADC_PIN);
-  X_PID.SetMode(AUTOMATIC);
-  Y_PID.SetMode(AUTOMATIC);
-  X_PID.SetTunings(Kp, Ki, Kd);
-  Y_PID.SetTunings(Kp, Ki, Kd);
 }
 
 void motor_setup()
@@ -462,10 +433,10 @@ float measureVoltage(int ADC_PIN) {
   float voltage = calibratedReading / 4096 * 5 * (200000 / 200000);
   float x_point = abs(X_point);
   float y_point = abs(Y_point);
-  
+
   if (voltage < 4 && voltage > 0.02) voltage += 0.2;
-  if((voltage >= x_point - 0.2) && (voltage <= x_point + 0.2) && (ADC_PIN == X_ADC_PIN)) voltage = x_point;
-  if((voltage >= y_point - 0.2) && (voltage <= y_point + 0.2) && (ADC_PIN == Y_ADC_PIN)) voltage = y_point;
+  if ((voltage >= x_point - 0.2) && (voltage <= x_point + 0.2) && (ADC_PIN == X_ADC_PIN)) voltage = x_point;
+  if ((voltage >= y_point - 0.2) && (voltage <= y_point + 0.2) && (ADC_PIN == Y_ADC_PIN)) voltage = y_point;
   return voltage;
 }
 
@@ -483,28 +454,38 @@ void display_setup()
 
 }
 
+void request_points_from_user()
+{
+  Serial.println("Please enter the X-point do you want. ");
+  while (Serial.available() == 0) {}
+  X_point = Serial.parseFloat();
+  Serial.println("Please enter the Y-point do you want. ");
+  while (Serial.available() == 0) {}
+  Y_point = Serial.parseFloat();
+
+  if (X_point > 4.91 || X_point < -4.91 || Y_point > 4.91 || Y_point < -4.91)
+  {
+    Serial.println("The points have to be less than 4.91V and greater than -4.91V.");
+    Serial.println("The program will use 0V as default.");
+    Serial.println("Please restart the program to enter the correct values.");
+    X_point = 0;
+    Y_point = 0;
+  }
+}
+
 float percentage_error(float actual_value, float expected_value)
 {
-  float error = abs((actual_value - expected_value)/expected_value);
-  return error;
+  float error = abs((actual_value - expected_value) / expected_value);
+  if (error <= 1)
+    return error;
+  else
+    return 1;
 }
 
 void motor_control(float X_voltage, float Y_voltage)
 {
-  float y_error = percentage_error(Y_voltage, Y_point);
-  float x_error = percentage_error(X_voltage, X_point);
-  int Y_speed = 0;
-  int X_speed = 0;
-  
-  if(y_error > 1)
-  Y_speed = 2048;
-  else
-  Y_speed = 2048 * y_error;
-
-  if(x_error > 1)
-  X_speed = 2048;
-  else
-  X_speed = 2048 * x_error;
+  int Y_speed = 2048 * percentage_error(Y_voltage, Y_point);
+  int X_speed = 2048 * percentage_error(X_voltage, X_point);
 
   if (Y_voltage < Y_point)
   {
