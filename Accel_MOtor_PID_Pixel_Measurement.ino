@@ -54,6 +54,11 @@ unsigned long beginMillis = 0;
 unsigned long period = 500;
 
 //********************************************************
+//points to set laser at
+float Y_point = 0;
+float X_point = -2;
+
+//********************************************************
 
 const float ADC_LUT[4096] = { 0,
                               7.4000, 17.0000, 18.8000, 20.8000, 22.8000, 24.8000, 26.6000, 28.6000, 30.4000, 32.2000, 33.6000, 34.8000, 36.0000, 37.2000, 38.6000,
@@ -336,7 +341,7 @@ const float ADC_LUT[4096] = { 0,
 
 void setup() {
 
-  //Serial.begin(115200);
+  Serial.begin(115200);
   beginMillis = millis();
   analogReadResolution(12);
   display_setup();
@@ -382,7 +387,7 @@ void PID_compute()
 
 void PID_setup()
 {
-  Setpoint = 0;
+  Setpoint = abs(Y_point);
   X_Input = -measureVoltage(X_ADC_PIN);
   Y_Input = -measureVoltage(Y_ADC_PIN);
   X_PID.SetMode(AUTOMATIC);
@@ -454,9 +459,13 @@ float measureVoltage(int ADC_PIN) {
 
   int rawReading = analogRead(ADC_PIN);                  // read value from ADC
   float calibratedReading = (int)ADC_LUT[rawReading];    // get the calibrated value from LUT
-
   float voltage = calibratedReading / 4096 * 5 * (200000 / 200000);
+  float x_point = abs(X_point);
+  float y_point = abs(Y_point);
+  
   if (voltage < 4 && voltage > 0.02) voltage += 0.2;
+  if((voltage >= x_point - 0.2) && (voltage <= x_point + 0.2) && (ADC_PIN == X_ADC_PIN)) voltage = x_point;
+  if((voltage >= y_point - 0.2) && (voltage <= y_point + 0.2) && (ADC_PIN == Y_ADC_PIN)) voltage = y_point;
   return voltage;
 }
 
@@ -474,16 +483,34 @@ void display_setup()
 
 }
 
+float percentage_error(float actual_value, float expected_value)
+{
+  float error = abs((actual_value - expected_value)/expected_value);
+  return error;
+}
+
 void motor_control(float X_voltage, float Y_voltage)
 {
-  int Y_speed = 2048 * (Y_Output / 100);
-  int X_speed = 2048 * (X_Output / 100);
+  float y_error = percentage_error(Y_voltage, Y_point);
+  float x_error = percentage_error(X_voltage, X_point);
+  int Y_speed = 0;
+  int X_speed = 0;
+  
+  if(y_error > 1)
+  Y_speed = 2048;
+  else
+  Y_speed = 2048 * y_error;
 
-  if (Y_voltage < 0)
+  if(x_error > 1)
+  X_speed = 2048;
+  else
+  X_speed = 2048 * x_error;
+
+  if (Y_voltage < Y_point)
   {
     stepper1.moveTo(stepper1.currentPosition() - Y_speed);
   }
-  else if (Y_voltage > 0)
+  else if (Y_voltage > Y_point)
   {
     stepper1.moveTo(stepper1.currentPosition() + Y_speed);
   }
@@ -492,11 +519,11 @@ void motor_control(float X_voltage, float Y_voltage)
     stepper1.moveTo(stepper1.currentPosition());
   }
 
-  if (X_voltage < 0)
+  if (X_voltage < X_point)
   {
     stepper2.moveTo(stepper2.currentPosition() - X_speed);
   }
-  else if (X_voltage > 0)
+  else if (X_voltage > X_point)
   {
     stepper2.moveTo(stepper2.currentPosition() + X_speed);
   }
