@@ -1,7 +1,6 @@
 /**
    Self-Correcting Laser Alignment System Code
    Keitumetsi Khoza
-   18/01/21
 **/
 
 #include <Wire.h>
@@ -337,7 +336,7 @@ void setup() {
   analogReadResolution(12);
   display_setup();
   motor_setup();
-  request_points_from_user();
+  //request_points_from_user();
 }
 
 void loop()
@@ -471,6 +470,11 @@ void request_points_from_user()
     X_point = 0;
     Y_point = 0;
   }
+
+  Serial.print("X-point: ");
+  Serial.println(X_point);
+  Serial.print("Y-point: ");
+  Serial.println(Y_point);
 }
 
 float percentage_error(float actual_value, float expected_value)
